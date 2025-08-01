@@ -1,0 +1,19 @@
+{
+  "name": "Salgados & Cia",
+  "short_name": "Salgados",
+  "description": "Sistema de pedidos online para Salgados & Cia",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#f97316",
+  "background_color": "#ffffff",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
