@@ -797,6 +797,7 @@ function AdminApp({ user, onLogout }: { user: SessionUser; onLogout: () => void 
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
+  const [activeSection, setActiveSection] = useState("overview");
 
   const loadEstablishments = async () => {
     setLoading(true);
@@ -844,6 +845,10 @@ function AdminApp({ user, onLogout }: { user: SessionUser; onLogout: () => void 
 
   const isPlatformAdmin = user.role === "PLATFORM_ADMIN";
   const roleLabel = isPlatformAdmin ? "Admin da plataforma" : "Admin do estabelecimento";
+  const goToSection = (sectionId: string) => {
+    setActiveSection(sectionId);
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   return (
     <main className="min-h-screen bg-[#f6f6f0] text-slate-950">
@@ -859,14 +864,39 @@ function AdminApp({ user, onLogout }: { user: SessionUser; onLogout: () => void 
         </div>
 
         <nav className="mt-8 space-y-1 text-sm">
-          <SidebarItem icon={<LayoutDashboard />} label="Visao geral" active />
+          <SidebarItem
+            icon={<LayoutDashboard />}
+            label="Visao geral"
+            active={activeSection === "overview"}
+            onClick={() => goToSection("overview")}
+          />
           {isPlatformAdmin ? (
-            <SidebarItem icon={<Store />} label="Estabelecimentos" />
+            <SidebarItem
+              icon={<Store />}
+              label="Estabelecimentos"
+              active={activeSection === "establishments"}
+              onClick={() => goToSection("establishments")}
+            />
           ) : (
-            <SidebarItem icon={<Store />} label="Meu estabelecimento" />
+            <SidebarItem
+              icon={<Store />}
+              label="Meu estabelecimento"
+              active={activeSection === "establishments"}
+              onClick={() => goToSection("establishments")}
+            />
           )}
-          <SidebarItem icon={<Package />} label="Produtos" />
-          <SidebarItem icon={<Settings />} label="Configuracoes" />
+          <SidebarItem
+            icon={<Package />}
+            label="Produtos"
+            active={activeSection === "products"}
+            onClick={() => goToSection("products")}
+          />
+          <SidebarItem
+            icon={<Settings />}
+            label="Configuracoes"
+            active={activeSection === "settings"}
+            onClick={() => goToSection("settings")}
+          />
         </nav>
 
         <div className="mt-auto rounded-lg border border-white/10 bg-white/5 p-4">
@@ -916,7 +946,7 @@ function AdminApp({ user, onLogout }: { user: SessionUser; onLogout: () => void 
         </header>
 
         <div className="grid gap-6 p-4 lg:grid-cols-[340px_1fr] lg:p-8">
-          <section className="space-y-4">
+          <section id="establishments" className="scroll-mt-24 space-y-4">
             {isPlatformAdmin && (
               <CreateEstablishmentCard onCreated={(id) => loadEstablishments().then(() => setSelectedId(id))} />
             )}
@@ -986,16 +1016,28 @@ function AdminApp({ user, onLogout }: { user: SessionUser; onLogout: () => void 
   );
 }
 
-function SidebarItem({ icon, label, active = false }: { icon: React.ReactNode; label: string; active?: boolean }) {
+function SidebarItem({
+  icon,
+  label,
+  active = false,
+  onClick
+}: {
+  icon: React.ReactNode;
+  label: string;
+  active?: boolean;
+  onClick: () => void;
+}) {
   return (
-    <div
-      className={`flex items-center gap-3 rounded-lg px-3 py-2 ${
-        active ? "bg-white text-slate-950" : "text-slate-400"
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
+        active ? "bg-white text-slate-950" : "text-slate-400 hover:bg-white/10 hover:text-white"
       }`}
     >
       {React.cloneElement(icon as React.ReactElement, { className: "h-4 w-4" })}
       {label}
-    </div>
+    </button>
   );
 }
 
@@ -1130,16 +1172,18 @@ function EstablishmentWorkspace({
 
   return (
     <div className="space-y-6">
-      <DashboardOverview
-        analytics={analytics}
-        loading={analyticsLoading}
-        fallback={{
-          totalProducts,
-          activeProducts,
-          categories: establishment.categories.length
-        }}
-        refresh={loadAnalytics}
-      />
+      <div id="overview" className="scroll-mt-24">
+        <DashboardOverview
+          analytics={analytics}
+          loading={analyticsLoading}
+          fallback={{
+            totalProducts,
+            activeProducts,
+            categories: establishment.categories.length
+          }}
+          refresh={loadAnalytics}
+        />
+      </div>
 
       <Panel>
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
@@ -1169,8 +1213,12 @@ function EstablishmentWorkspace({
       </Panel>
 
       <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
-        <SettingsPanel establishment={establishment} reload={reload} />
-        <CatalogPanel establishment={establishment} reload={reload} />
+        <div id="settings" className="scroll-mt-24">
+          <SettingsPanel establishment={establishment} reload={reload} />
+        </div>
+        <div id="products" className="scroll-mt-24">
+          <CatalogPanel establishment={establishment} reload={reload} />
+        </div>
       </div>
     </div>
   );
