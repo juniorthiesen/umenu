@@ -1,0 +1,44 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: umenu-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-umenu}
+      POSTGRES_USER: ${POSTGRES_USER:-umenu}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-umenu} -d ${POSTGRES_DB:-umenu}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: umenu-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-umenu}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-umenu}
+      API_HOST: 0.0.0.0
+      API_PORT: 3333
+      APP_DOMAIN: ${APP_DOMAIN:-localhost}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173,http://localhost:4173}
+      JWT_SECRET: ${JWT_SECRET:-change-this-development-secret-with-32-chars}
+      UPLOAD_DIR: uploads
+    ports:
+      - "3333:3333"
+    volumes:
+      - uploads_data:/app/uploads
+    command: sh -c "npx prisma migrate deploy && npm run start:api"
+
+volumes:
+  postgres_data:
+  uploads_data:

@@ -142,6 +142,8 @@ Thumbs.db
 # Build outputs
 build/
 out/
+uploads/
+backend/generated/
 
 # Temporary files
 *.tmp
@@ -152,3 +154,4 @@ out/
 .env.development.local
 .env.test.local
 .env.production.local
+/src/generated/prisma

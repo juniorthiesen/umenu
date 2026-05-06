@@ -1,269 +1,189 @@
-# 🍰 Salgados & Cia - Sistema de Pedidos Online
+# UMenu
 
-<div align="center">
-  <img src="https://adsmentor.com.br/wp-content/uploads/2025/07/359813634_767659685362995_5873767330149179225_n.png" alt="Salgados & Cia Logo" width="100" height="100" style="border-radius: 50%">
-  
-  **Sistema web responsivo para pedidos online de salgados e doces**
-  
-  [![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/seu-usuario/salgados-cia)
-  [![React](https://img.shields.io/badge/React-18.2.0-61dafb.svg)](https://reactjs.org/)
-  [![TypeScript](https://img.shields.io/badge/TypeScript-5.0.2-3178c6.svg)](https://www.typescriptlang.org/)
-  [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.3.3-38b2ac.svg)](https://tailwindcss.com/)
-  [![Vite](https://img.shields.io/badge/Vite-4.4.5-646cff.svg)](https://vitejs.dev/)
-</div>
+Sistema multi-tenant para cardapios digitais com painel administrativo, catalogo publico e envio de pedidos pelo WhatsApp.
 
----
+## Estado Atual
 
-## 🎯 **Sobre o Projeto**
+- Frontend React + Vite + TypeScript + Tailwind.
+- Backend Fastify + JWT + bcrypt.
+- Banco Postgres via Docker.
+- ORM Prisma com migrations versionadas.
+- Admin da plataforma para criar e gerenciar estabelecimentos.
+- Admin do estabelecimento para configurar dados, categorias e produtos.
+- Catalogo publico por tenant.
+- Pedidos continuam sendo finalizados no WhatsApp.
+- Registro de acessos ao cardapio e pedidos iniciados para metricas.
 
-O **Salgados & Cia** é um sistema moderno e responsivo para pedidos online de salgados, doces e produtos de confeitaria. Desenvolvido com React, TypeScript e Tailwind CSS, oferece uma experiência otimizada para clientes que desejam fazer pedidos de forma rápida e intuitiva.
+## Arquitetura
 
-### ✨ **Principais Funcionalidades**
+```text
+src/
+  App.tsx          Interface admin e cardapio publico
+  api.ts           Cliente HTTP do frontend
+  types.ts         Tipos compartilhados do frontend
 
-- 🛒 **Carrinho Inteligente** - Persistência local com validações automáticas
-- 🔍 **Busca Avançada** - Busca em tempo real com debounce otimizado
-- 📱 **Design Responsivo** - Funciona perfeitamente em todos os dispositivos
-- ⚡ **Performance Otimizada** - Lazy loading, memoização e otimizações React
-- 💬 **Integração WhatsApp** - Finalização de pedidos direta pelo WhatsApp
-- 🕒 **Status em Tempo Real** - Indicador de funcionamento do estabelecimento
+backend/src/
+  server.ts        Rotas HTTP, CORS, catalogo, analytics e pedidos
+  auth.ts          JWT e autenticacao
+  db.ts            Prisma client
+  env.ts           Variaveis de ambiente
 
----
+prisma/
+  schema.prisma    Modelo Postgres
+  migrations/      Migrations aplicadas no deploy
 
-## 🚀 **Demo**
+legacy/
+  supabase-version Versao antiga preservada apenas como referencia
+```
 
-🔗 **[Ver Demo Online](https://seu-usuario.github.io/salgados-cia)**
+## Requisitos
 
-### 📱 **Screenshots**
+- Node.js 24 ou compativel com o Dockerfile atual.
+- Docker e Docker Compose.
+- npm.
 
-<div align="center">
-  <img src="docs/screenshots/desktop.png" alt="Desktop" width="45%">
-  <img src="docs/screenshots/mobile.png" alt="Mobile" width="45%">
-</div>
+## Configuracao
 
----
-
-## 🛠 **Tecnologias Utilizadas**
-
-### **Frontend**
-- **React 18** - Biblioteca JavaScript para interfaces
-- **TypeScript** - Tipagem estática para JavaScript
-- **Tailwind CSS** - Framework CSS utilitário
-- **Lucide React** - Biblioteca de ícones
-
-### **Build & Dev Tools**
-- **Vite** - Build tool moderna e rápida
-- **PostCSS** - Processamento de CSS
-- **Autoprefixer** - Prefixos CSS automáticos
-
-### **Arquitetura**
-- **Modular** - Separação clara de responsabilidades
-- **Context API** - Gerenciamento de estado global
-- **Custom Hooks** - Lógica reutilizável
-- **TypeScript** - Type safety completo
-
----
-
-## 📦 **Instalação e Uso**
-
-### **Pré-requisitos**
-- Node.js 16+ 
-- npm ou yarn
-
-### **Instalação**
+Copie as variaveis de exemplo:
 
 ```bash
-# Clone o repositório
-git clone https://github.com/seu-usuario/salgados-cia.git
+cp .env.example .env
+```
 
-# Entre no diretório
-cd salgados-cia
+Principais variaveis:
 
-# Instale as dependências
+```env
+DATABASE_URL=postgresql://umenu:umenu_password@localhost:5432/umenu?schema=public
+JWT_SECRET=troque-em-producao
+CORS_ORIGIN=http://localhost:5173,http://localhost:4173
+VITE_API_URL=http://localhost:3333
+
+PLATFORM_ADMIN_EMAIL=admin@umenu.local
+PLATFORM_ADMIN_PASSWORD=change-me-admin-password
+```
+
+Em producao, troque obrigatoriamente `JWT_SECRET`, senhas do Postgres e senha do admin.
+
+## Rodando Localmente
+
+Subir Postgres e API:
+
+```bash
+docker compose up -d
+```
+
+Instalar dependencias e gerar Prisma:
+
+```bash
 npm install
+npm run prisma:generate
+```
 
-# Inicie o servidor de desenvolvimento
+Criar admin inicial:
+
+```bash
+npm run seed:admin
+```
+
+Rodar frontend em desenvolvimento:
+
+```bash
 npm run dev
 ```
 
-### **Scripts Disponíveis**
+Ou servir o build local:
 
 ```bash
-npm run dev      # Servidor de desenvolvimento
-npm run build    # Build para produção
-npm run preview  # Preview do build
+npm run build
+npm run preview -- --host 0.0.0.0 --port 4173
 ```
 
----
-
-## 📁 **Estrutura do Projeto**
-
-```
-src/
-├── types/              # Tipos TypeScript
-│   └── index.ts
-├── data/               # Dados do menu
-│   └── menu.ts
-├── utils/              # Funções utilitárias
-│   ├── pricing.ts
-│   └── __tests__/
-├── hooks/              # Hooks customizados
-│   ├── useDebounce.ts
-│   ├── useBusinessStatus.ts
-│   └── useLocalStorage.ts
-├── contexts/           # Contextos React
-│   ├── SearchContext.tsx
-│   └── CartContext.tsx
-└── components/         # Componentes reutilizáveis
-    ├── Header.tsx
-    ├── ProductCard.tsx
-    ├── LazyImage.tsx
-    ├── OrderSummary.tsx
-    └── NoResults.tsx
-```
-
----
-
-## 🎨 **Funcionalidades Detalhadas**
-
-### **Sistema de Produtos**
-- **Múltiplos Tipos de Precificação**: Unidade, cento, kg
-- **Validações Inteligentes**: Quantidades mínimas e incrementos
-- **Categorização**: Produtos organizados por categorias
-- **Imagens Otimizadas**: Lazy loading com fallback
-
-### **Carrinho de Compras**
-- **Persistência Local**: Dados salvos no localStorage
-- **Validações em Tempo Real**: Feedback imediato de erros
-- **Cálculos Automáticos**: Subtotais e total geral
-- **Interface Intuitiva**: Slide-out com animações suaves
-
-### **Sistema de Busca**
-- **Busca Inteligente**: Nome, descrição e categoria
-- **Debounce Otimizado**: 300ms para melhor performance
-- **Feedback Visual**: Indicadores de carregamento
-- **Resultados Relevantes**: Algoritmo de busca eficiente
-
----
-
-## 📊 **Performance**
-
-### **Otimizações Implementadas**
-- ⚡ **React.memo** - Prevenção de re-renders desnecessários
-- 🔄 **useCallback** - Memoização de funções
-- 🖼️ **Lazy Loading** - Carregamento sob demanda de imagens
-- ⏱️ **Debounce** - Otimização de busca
-- 💾 **localStorage Otimizado** - Salvamento com debounce
-
-### **Métricas**
-- **First Contentful Paint**: < 1.5s
-- **Largest Contentful Paint**: < 2.5s
-- **Cumulative Layout Shift**: < 0.1
-- **Time to Interactive**: < 3s
-
----
-
-## 🧪 **Testes**
+## Scripts
 
 ```bash
-# Executar testes unitários
-npm test
-
-# Executar testes com coverage
-npm run test:coverage
+npm run dev                # frontend Vite
+npm run preview            # preview do build
+npm run build              # build API + frontend
+npm run build:api          # build TypeScript da API
+npm run start:api          # inicia API
+npm run prisma:generate    # gera Prisma Client
+npm run prisma:migrate     # cria/aplica migration local
+npm run seed:admin         # cria admin da plataforma
+npm run seed:legacy-menu   # importa catalogo legado para um tenant
 ```
 
-### **Cobertura de Testes**
-- ✅ **Funções Utilitárias**: 100%
-- ✅ **Hooks Customizados**: 90%
-- 🔄 **Componentes**: Em desenvolvimento
+## Fluxos Principais
 
----
+### Plataforma
 
-## 🔧 **Configuração**
+1. Entrar no admin.
+2. Criar estabelecimento.
+3. Validar disponibilidade de URL/subdominio.
+4. Criar usuario admin do tenant.
+5. Gerenciar status e dados do estabelecimento.
 
-### **Personalização do Menu**
-Edite o arquivo `src/data/menu.ts` para adicionar/modificar produtos:
+### Estabelecimento
 
-```typescript
-export const menuData: Category[] = [
-  {
-    id: 'categoria-id',
-    name: 'Nome da Categoria',
-    products: [
-      {
-        id: 1,
-        name: 'Nome do Produto',
-        price: 10.00,
-        pricingType: 'unidade', // 'unidade' | 'cento' | 'kg'
-        image: 'url-da-imagem',
-        description: 'Descrição do produto'
-      }
-    ]
-  }
-];
+1. Entrar com usuario do tenant.
+2. Ajustar nome, WhatsApp, endereco, logo e banner.
+3. Criar/editar categorias.
+4. Criar/editar produtos.
+5. Alterar preco, foto URL, tipo de preco, minimo, incremento e disponibilidade.
+6. Acompanhar dashboard com acessos, pedidos, conversao e funil.
+
+### Cliente
+
+1. Acessa URL publica do tenant.
+2. Navega pelo cardapio.
+3. Adiciona produtos ao carrinho.
+4. Finaliza o pedido pelo WhatsApp.
+
+## URL Publica por Tenant
+
+No ambiente local:
+
+```text
+http://localhost:4173?tenant=salgados-cia-teste
 ```
 
-### **Configuração do Negócio**
-Ajuste as configurações em `src/hooks/useBusinessStatus.ts`:
+Em producao, a aplicacao suporta subdominio:
 
-```typescript
-const BUSINESS_HOURS = {
-  1: { start: 9, end: 18 }, // Segunda
-  2: { start: 9, end: 18 }, // Terça
-  // ... outros dias
-};
+```text
+https://salgados-cia-teste.seudominio.com
 ```
 
----
+O proxy/reverse proxy da VPS deve apontar o frontend para o mesmo app e a API para `/api` ou para o host configurado em `VITE_API_URL`.
 
-## 🤝 **Contribuição**
+## Analytics
 
-Contribuições são sempre bem-vindas! Para contribuir:
+Hoje o sistema registra:
 
-1. **Fork** o projeto
-2. **Crie** uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
-3. **Commit** suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. **Push** para a branch (`git push origin feature/AmazingFeature`)
-5. **Abra** um Pull Request
+- Visitas ao cardapio publico.
+- Pedidos iniciados pelo botao de WhatsApp.
+- Conversao simples: pedidos / acessos.
+- Receita estimada enviada para WhatsApp.
+- Contadores de categorias, produtos ativos e produtos totais.
 
-### **Padrões de Código**
-- Use **TypeScript** para type safety
-- Siga os padrões do **ESLint**
-- Escreva **testes** para novas funcionalidades
-- Documente **mudanças** no README
+## Upload de Imagens
 
----
+O upload ainda nao foi ativado de proposito. O proximo passo e implementar pipeline com:
 
-## 📄 **Licença**
+- validacao de tipo e tamanho;
+- resize;
+- conversao para WebP;
+- compressao;
+- armazenamento em volume Docker ou object storage;
+- limpeza de imagens antigas quando produto for atualizado.
 
-Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+## Verificacao
 
----
+```bash
+npm run build
+docker compose ps
+```
 
-## 📞 **Contato**
+A API deve responder em:
 
-### **Salgados & Cia**
-- 📍 **Endereço**: Palmas, PR
-- 📱 **WhatsApp**: +55 11 99999-8888
-- 🕒 **Horário**: Seg-Sex 9h-18h, Sáb 9h-13h
-
-### **Desenvolvedor**
-- 👨‍💻 **GitHub**: [@seu-usuario](https://github.com/seu-usuario)
-- 💼 **LinkedIn**: [Seu Nome](https://linkedin.com/in/seu-perfil)
-- 📧 **Email**: seu.email@exemplo.com
-
----
-
-## 🙏 **Agradecimentos**
-
-- **React Team** - Pela excelente biblioteca
-- **Tailwind CSS** - Pelo framework CSS incrível
-- **Lucide** - Pelos ícones lindos
-- **Vite** - Pela ferramenta de build rápida
-
----
-
-<div align="center">
-  <p>Feito com ❤️ para a <strong>Salgados & Cia</strong></p>
-  <p>⭐ Se este projeto te ajudou, considere dar uma estrela!</p>
-</div>
+```text
+http://localhost:3333/health
+```
