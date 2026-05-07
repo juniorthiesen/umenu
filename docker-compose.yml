@@ -25,18 +25,40 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      NODE_ENV: ${NODE_ENV:-production}
+      NODE_ENV: production
+
       DATABASE_URL: postgresql://${POSTGRES_USER:-umenu}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-umenu}
+
       API_HOST: 0.0.0.0
       API_PORT: 3333
-      APP_DOMAIN: ${APP_DOMAIN:-localhost}
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173,http://localhost:4173}
-      JWT_SECRET: ${JWT_SECRET:-change-this-development-secret-with-32-chars}
-      UPLOAD_DIR: uploads
+
+      APP_DOMAIN: ${APP_DOMAIN:-umenu.com.br}
+
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://umenu.com.br,https://www.umenu.com.br,https://api.umenu.com.br}
+
+      JWT_SECRET: ${JWT_SECRET:-change-this-production-secret-with-32-chars}
+
+      UPLOAD_DIR: /app/uploads
+      PUBLIC_UPLOAD_BASE_URL: ${PUBLIC_UPLOAD_BASE_URL:-https://api.umenu.com.br}
+
+      MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-8}
+
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_IMAGE_MODEL: ${OPENAI_IMAGE_MODEL:-gpt-image-1.5}
+
+      PLATFORM_ADMIN_EMAIL: ${PLATFORM_ADMIN_EMAIL:-admin@umenu.com.br}
+      PLATFORM_ADMIN_PASSWORD: ${PLATFORM_ADMIN_PASSWORD:-change-me-admin-password}
+
+      ADMIN_EMAIL: ${PLATFORM_ADMIN_EMAIL:-admin@umenu.com.br}
+      ADMIN_PASSWORD: ${PLATFORM_ADMIN_PASSWORD:-change-me-admin-password}
+      ADMIN_NAME: ${ADMIN_NAME:-Admin UMenu}
+
     ports:
       - "3333:3333"
+
     volumes:
       - uploads_data:/app/uploads
+
     command: sh -c "npx prisma migrate deploy && npm run start:api"
 
 volumes:
