@@ -1232,10 +1232,20 @@ function AdminApp({ user, onLogout }: { user: SessionUser; onLogout: () => void 
     setActiveSection(sectionId);
     document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
+  const navItems = [
+    { id: "overview", label: "Visão geral", icon: <LayoutDashboard /> },
+    {
+      id: "establishments",
+      label: isPlatformAdmin ? "Estabelecimentos" : "Meu estabelecimento",
+      icon: <Store />
+    },
+    { id: "products", label: "Produtos", icon: <Package /> },
+    { id: "settings", label: "Configurações", icon: <Settings /> }
+  ];
 
   return (
-    <main className="min-h-screen bg-[#f6f6f0] text-slate-950">
-      <aside className="fixed inset-y-0 left-0 hidden w-72 border-r border-slate-200 bg-slate-950 p-5 text-white lg:flex lg:flex-col">
+    <main className="min-h-screen overflow-x-hidden bg-[#f4f3ec] text-slate-950">
+      <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-slate-800 bg-slate-950 p-4 text-white lg:flex lg:flex-col">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-500">
             <Store className="h-5 w-5" />
@@ -1282,7 +1292,7 @@ function AdminApp({ user, onLogout }: { user: SessionUser; onLogout: () => void 
           />
         </nav>
 
-        <div className="mt-auto rounded-lg border border-white/10 bg-white/5 p-4">
+        <div className="mt-auto rounded-xl border border-white/10 bg-white/5 p-4">
           <p className="text-sm font-medium">{user.name}</p>
           <p className="mt-1 text-xs text-slate-400">{user.email}</p>
           <p className="mt-2 inline-flex rounded-md bg-white/10 px-2 py-1 text-xs text-slate-300">
@@ -1298,17 +1308,37 @@ function AdminApp({ user, onLogout }: { user: SessionUser; onLogout: () => void 
         </div>
       </aside>
 
-      <section className="lg:pl-72">
-        <header className="sticky top-0 z-20 border-b border-slate-200 bg-[#f6f6f0]/90 px-4 py-4 backdrop-blur lg:px-8">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <section className="min-w-0 lg:ml-64">
+        <header className="sticky top-0 z-20 border-b border-slate-200 bg-[#f4f3ec]/95 px-3 py-3 backdrop-blur sm:px-4 lg:px-6">
+          <div className="mx-auto flex max-w-[1500px] flex-col gap-3">
+            <div className="flex items-center justify-between gap-3 lg:hidden">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-500 text-white">
+                  <Store className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="font-semibold leading-none">UMenu</p>
+                  <p className="mt-1 text-xs text-slate-500">{roleLabel}</p>
+                </div>
+              </div>
+              <button
+                className="flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium"
+                onClick={onLogout}
+              >
+                <LogOut className="h-4 w-4" />
+                Sair
+              </button>
+            </div>
+
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div>
               <p className="text-sm text-slate-500">Operação</p>
               <h1 className="text-2xl font-semibold tracking-tight">
                 {isPlatformAdmin ? "Admin de cardápios" : "Meu cardápio"}
               </h1>
             </div>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <div className="relative">
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <div className="relative min-w-0">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
                   className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200 sm:w-72"
@@ -1326,14 +1356,32 @@ function AdminApp({ user, onLogout }: { user: SessionUser; onLogout: () => void 
               </button>
             </div>
           </div>
+            <nav className="-mx-1 flex gap-2 overflow-x-auto pb-1 lg:hidden">
+              {navItems.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => goToSection(item.id)}
+                  className={`flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold ${
+                    activeSection === item.id
+                      ? "border-slate-950 bg-slate-950 text-white"
+                      : "border-slate-200 bg-white text-slate-600"
+                  }`}
+                >
+                  {React.cloneElement(item.icon as React.ReactElement, { className: "h-3.5 w-3.5" })}
+                  {item.label}
+                </button>
+              ))}
+            </nav>
+          </div>
         </header>
 
-        <div className="grid gap-6 p-4 lg:grid-cols-[340px_1fr] lg:p-8">
+        <div className="mx-auto grid max-w-[1500px] gap-4 p-3 sm:p-4 lg:grid-cols-[300px_minmax(0,1fr)] lg:p-6 xl:p-8">
           <section id="establishments" className="scroll-mt-24 space-y-4">
             {isPlatformAdmin && (
               <CreateEstablishmentCard onCreated={(id) => loadEstablishments().then(() => setSelectedId(id))} />
             )}
-            <div className="rounded-lg border border-slate-200 bg-white">
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm shadow-slate-200/60">
               <div className="border-b border-slate-200 p-4">
                 <h2 className="font-semibold">{isPlatformAdmin ? "Estabelecimentos" : "Acesso do tenant"}</h2>
                 <p className="mt-1 text-sm text-slate-500">{filtered.length} registros</p>
@@ -1374,7 +1422,7 @@ function AdminApp({ user, onLogout }: { user: SessionUser; onLogout: () => void 
             </div>
           </section>
 
-          <section>
+          <section className="min-w-0">
             {detailLoading ? (
               <Panel>
                 <div className="flex items-center gap-2 text-sm text-slate-500">
@@ -1434,7 +1482,7 @@ function StatusPill({ status }: { status: string }) {
 }
 
 function Panel({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <div className={`rounded-xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/50 ${className}`}>{children}</div>;
+  return <div className={`min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-200/60 sm:p-5 ${className}`}>{children}</div>;
 }
 
 function CreateEstablishmentCard({ onCreated }: { onCreated: (id: string) => void }) {
@@ -1557,7 +1605,7 @@ function EstablishmentWorkspace({
   }, [establishment.id]);
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-5">
       <div id="overview" className="scroll-mt-24">
         <DashboardOverview
           analytics={analytics}
@@ -1572,16 +1620,16 @@ function EstablishmentWorkspace({
       </div>
 
       <Panel>
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-          <div>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-3">
-              <h2 className="text-2xl font-semibold tracking-tight">{establishment.name}</h2>
+              <h2 className="break-words text-xl font-semibold tracking-tight sm:text-2xl">{establishment.name}</h2>
               <StatusPill status={establishment.status} />
             </div>
-            <p className="mt-2 text-sm text-slate-500">{publicUrlFor(establishment.subdomain)}</p>
+            <p className="mt-2 break-all text-sm text-slate-500">{publicUrlFor(establishment.subdomain)}</p>
           </div>
           <a
-            className="flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50"
+            className="flex shrink-0 items-center justify-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50"
             href={publicUrlFor(establishment.subdomain)}
             target="_blank"
             rel="noreferrer"
@@ -1591,7 +1639,7 @@ function EstablishmentWorkspace({
           </a>
         </div>
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-3">
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <SummaryStat icon={<Tag />} label="Categorias" value={String(establishment.categories.length)} />
           <SummaryStat icon={<Package />} label="Produtos ativos" value={`${activeProducts}/${totalProducts}`} />
           <SummaryStat icon={<Store />} label="WhatsApp" value={establishment.whatsappPhone} />
@@ -1604,7 +1652,7 @@ function EstablishmentWorkspace({
         reload={reload}
       />
 
-      <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
+      <div className="grid min-w-0 gap-5 xl:grid-cols-[340px_minmax(0,1fr)]">
         <div id="settings" className="scroll-mt-24">
           <SettingsPanel establishment={establishment} reload={reload} />
         </div>
@@ -1645,14 +1693,14 @@ function DashboardOverview({
         </button>
       </div>
 
-      <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
         <SummaryStat icon={<Eye />} label="Acessos 7 dias" value={String(analytics?.visits7d ?? 0)} />
         <SummaryStat icon={<ShoppingCart />} label="Pedidos 7 dias" value={String(analytics?.orders7d ?? 0)} />
         <SummaryStat icon={<BarChart3 />} label="Conversão" value={conversion} />
         <SummaryStat icon={<Tag />} label="Faturamento 7 dias" value={currency.format(analytics?.revenue7d ?? 0)} />
       </div>
 
-      <div className="mt-5 grid gap-4 xl:grid-cols-[1fr_320px]">
+      <div className="mt-5 grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
         <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="font-semibold">Funil de vendas</h3>
@@ -1707,10 +1755,10 @@ function FunnelRow({ label, value, max }: { label: string; value: number; max: n
 
 function SummaryStat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+    <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-4">
       <div className="mb-3 text-orange-500">{React.cloneElement(icon as React.ReactElement, { className: "h-5 w-5" })}</div>
       <p className="text-xs uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-1 truncate font-semibold">{value}</p>
+      <p className="mt-1 break-words font-semibold">{value}</p>
     </div>
   );
 }
@@ -1763,7 +1811,7 @@ function AiCreditsPanel({
       </div>
 
       {canManage && (
-        <form onSubmit={submit} className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+        <form onSubmit={submit} className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,280px)_auto] sm:items-end">
           <Input label="Definir saldo" type="number" value={credits} onChange={setCredits} />
           <button
             className="flex h-10 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:bg-slate-400"
@@ -1772,7 +1820,7 @@ function AiCreditsPanel({
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             Salvar créditos
           </button>
-          {message && <p className="text-sm text-slate-500">{message}</p>}
+          {message && <p className="text-sm text-slate-500 sm:col-span-2">{message}</p>}
         </form>
       )}
     </Panel>
@@ -1906,13 +1954,13 @@ function CatalogPanel({ establishment, reload }: { establishment: EstablishmentD
   };
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-5">
       <Panel>
-        <div className="grid gap-5 xl:grid-cols-2">
+        <div className="grid min-w-0 gap-6 2xl:grid-cols-[0.9fr_1.1fr]">
           <form onSubmit={addCategory} className="space-y-3">
             <h3 className="font-semibold">Nova categoria</h3>
             <Input label="Nome" value={categoryName} onChange={setCategoryName} />
-            <button className="flex items-center gap-2 rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white">
+            <button className="flex w-full items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white sm:w-auto">
               {saving === "category" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
               Adicionar categoria
             </button>
@@ -1933,7 +1981,7 @@ function CatalogPanel({ establishment, reload }: { establishment: EstablishmentD
                 </option>
               ))}
             </select>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid min-w-0 gap-3 sm:grid-cols-2">
               <Input label="Nome" value={productForm.name} onChange={(value) => setProductForm({ ...productForm, name: value })} required />
               <Input label="Preço" type="number" value={productForm.price} onChange={(value) => setProductForm({ ...productForm, price: value })} required />
             </div>
@@ -1946,7 +1994,7 @@ function CatalogPanel({ establishment, reload }: { establishment: EstablishmentD
               nameHint={productForm.name || "produto"}
               onUploaded={(url) => setProductForm((current) => ({ ...current, imageUrl: url }))}
             />
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid min-w-0 gap-3 sm:grid-cols-3">
               <select
                 className="rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200"
                 value={productForm.pricingType}
@@ -1959,7 +2007,7 @@ function CatalogPanel({ establishment, reload }: { establishment: EstablishmentD
               <Input label="Min." type="number" value={productForm.minQuantity} onChange={(value) => setProductForm({ ...productForm, minQuantity: value })} />
               <Input label="Passo" type="number" value={productForm.stepQuantity} onChange={(value) => setProductForm({ ...productForm, stepQuantity: value })} />
             </div>
-            <button className="flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white">
+            <button className="flex w-full items-center justify-center gap-2 rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white sm:w-auto">
               {saving === "product" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
               Adicionar produto
             </button>
@@ -2013,7 +2061,7 @@ function CategoryBlock({
   };
 
   return (
-    <section className="p-5">
+    <section className="p-4 sm:p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-1 items-center gap-2">
           <input
@@ -2037,7 +2085,7 @@ function CategoryBlock({
         {category.products.length === 0 ? (
           <p className="p-4 text-sm text-slate-500">Categoria sem produtos.</p>
         ) : (
-          <table className="w-full min-w-[760px] text-left text-sm">
+          <table className="w-full min-w-[680px] text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="px-4 py-3">Produto</th>
@@ -2428,7 +2476,7 @@ function Input({
     <label className="block text-sm font-medium text-slate-700">
       {label}
       <input
-        className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-200"
+        className="mt-1 w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-200"
         value={value}
         onChange={(event) => onChange(event.target.value)}
         type={type}
