@@ -30,10 +30,27 @@ const app = Fastify({
 });
 
 const allowedOrigins = env.CORS_ORIGIN.split(",").map((origin) => origin.trim());
+const appDomain = env.APP_DOMAIN.replace(/^https?:\/\//, "").replace(/\/$/, "").toLowerCase();
+
+const isAllowedCorsOrigin = (origin: string) => {
+  if (env.CORS_ORIGIN === "*" || allowedOrigins.includes(origin)) {
+    return true;
+  }
+
+  try {
+    const url = new URL(origin);
+    const hostname = url.hostname.toLowerCase();
+    const protocolAllowed = url.protocol === "https:" || url.protocol === "http:";
+
+    return protocolAllowed && (hostname === appDomain || hostname.endsWith(`.${appDomain}`));
+  } catch {
+    return false;
+  }
+};
 
 await app.register(cors, {
   origin: (origin, callback) => {
-    if (!origin || env.CORS_ORIGIN === "*" || allowedOrigins.includes(origin)) {
+    if (!origin || isAllowedCorsOrigin(origin)) {
       callback(null, true);
       return;
     }
