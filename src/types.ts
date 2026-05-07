@@ -16,6 +16,7 @@ export interface EstablishmentSummary {
   subdomain: string;
   status: EstablishmentStatus;
   whatsappPhone: string;
+  aiImageCredits: number;
   createdAt: string;
 }
 
@@ -52,6 +53,7 @@ export interface EstablishmentDetail extends EstablishmentSummary {
   primaryColor: string;
   deliveryFee: number;
   minimumOrder: number;
+  aiImageCredits: number;
   categories: Category[];
 }
 
@@ -68,4 +70,13 @@ export interface EstablishmentAnalytics {
   activeProductCount: number;
   categoryCount: number;
   funnel: Array<{ label: string; value: number }>;
+}
+
+export interface UploadedImage {
+  url: string;
+  path: string;
+  width: number;
+  height: number;
+  size: number;
+  format: "webp";
 }

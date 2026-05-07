@@ -9,7 +9,11 @@ const envSchema = z.object({
   APP_DOMAIN: z.string().default("localhost"),
   CORS_ORIGIN: z.string().default("http://localhost:5173"),
   JWT_SECRET: z.string().min(32).default("change-this-development-secret-with-32-chars"),
-  UPLOAD_DIR: z.string().default("uploads")
+  UPLOAD_DIR: z.string().default("uploads"),
+  PUBLIC_UPLOAD_BASE_URL: z.string().url().optional(),
+  MAX_UPLOAD_MB: z.coerce.number().positive().default(8),
+  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_IMAGE_MODEL: z.string().default("gpt-image-1.5")
 });
 
 export const env = envSchema.parse(process.env);

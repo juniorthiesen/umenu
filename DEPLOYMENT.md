@@ -26,6 +26,11 @@ CORS_ORIGIN=https://app.seudominio.com,https://*.seudominio.com
 API_HOST=0.0.0.0
 API_PORT=3333
 UPLOAD_DIR=uploads
+PUBLIC_UPLOAD_BASE_URL=https://api.seudominio.com
+MAX_UPLOAD_MB=8
+
+OPENAI_API_KEY=sk-proj...
+OPENAI_IMAGE_MODEL=gpt-image-1.5
 
 VITE_API_URL=https://api.seudominio.com
 
@@ -119,7 +124,9 @@ Em producao, automatize backup diario e mantenha copia fora da VPS.
 - [ ] `CORS_ORIGIN` restrito aos dominios reais.
 - [ ] Backups automaticos do Postgres.
 - [ ] Volume persistente para Postgres.
-- [ ] Volume persistente para uploads quando o pipeline de imagem for ativado.
+- [ ] Volume persistente para uploads.
+- [ ] `PUBLIC_UPLOAD_BASE_URL` apontando para a URL publica da API.
+- [ ] `OPENAI_API_KEY` configurada apenas se a melhoria por IA estiver ativa.
 - [ ] Logs da API monitorados.
 - [ ] Firewall permitindo apenas SSH, HTTP e HTTPS publicos.
 
@@ -145,7 +152,7 @@ docker compose ps
 
 ## Proximos Passos
 
-1. Implementar upload de imagens com WebP, resize e compressao.
-2. Adicionar testes automatizados para rotas criticas.
-3. Separar frontend em container Nginx se o deploy exigir tudo via Compose.
-4. Configurar observabilidade basica: logs, uptime e alerta de erro.
+1. Adicionar testes automatizados para rotas criticas.
+2. Separar frontend em container Nginx se o deploy exigir tudo via Compose.
+3. Configurar observabilidade basica: logs, uptime e alerta de erro.
+4. Avaliar storage externo se o volume local deixar de atender.

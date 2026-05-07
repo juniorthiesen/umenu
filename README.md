@@ -1,6 +1,6 @@
 # UMenu
 
-Sistema multi-tenant para cardapios digitais com painel administrativo, catalogo publico e envio de pedidos pelo WhatsApp.
+Sistema multi-tenant para cardápios digitais com painel administrativo, catálogo público e envio de pedidos pelo WhatsApp.
 
 ## Estado Atual
 
@@ -10,15 +10,15 @@ Sistema multi-tenant para cardapios digitais com painel administrativo, catalogo
 - ORM Prisma com migrations versionadas.
 - Admin da plataforma para criar e gerenciar estabelecimentos.
 - Admin do estabelecimento para configurar dados, categorias e produtos.
-- Catalogo publico por tenant.
+- Catálogo público por tenant.
 - Pedidos continuam sendo finalizados no WhatsApp.
-- Registro de acessos ao cardapio e pedidos iniciados para metricas.
+- Registro de acessos ao cardápio e pedidos iniciados para métricas.
 
 ## Arquitetura
 
 ```text
 src/
-  App.tsx          Interface admin e cardapio publico
+  App.tsx          Interface admin e cardápio público
   api.ts           Cliente HTTP do frontend
   types.ts         Tipos compartilhados do frontend
 
@@ -57,6 +57,10 @@ DATABASE_URL=postgresql://umenu:umenu_password@localhost:5432/umenu?schema=publi
 JWT_SECRET=troque-em-producao
 CORS_ORIGIN=http://localhost:5173,http://localhost:4173
 VITE_API_URL=http://localhost:3333
+PUBLIC_UPLOAD_BASE_URL=http://localhost:3333
+MAX_UPLOAD_MB=8
+OPENAI_API_KEY=
+OPENAI_IMAGE_MODEL=gpt-image-1.5
 
 PLATFORM_ADMIN_EMAIL=admin@umenu.local
 PLATFORM_ADMIN_PASSWORD=change-me-admin-password
@@ -164,16 +168,28 @@ Hoje o sistema registra:
 - Receita estimada enviada para WhatsApp.
 - Contadores de categorias, produtos ativos e produtos totais.
 
-## Upload de Imagens
+## Upload e IA de Imagens
 
-O upload ainda nao foi ativado de proposito. O proximo passo e implementar pipeline com:
+O painel suporta upload de imagens para produtos, logo e banner.
 
-- validacao de tipo e tamanho;
-- resize;
-- conversao para WebP;
-- compressao;
-- armazenamento em volume Docker ou object storage;
-- limpeza de imagens antigas quando produto for atualizado.
+Pipeline atual:
+
+- aceita JPEG, PNG, WebP, HEIC e HEIF;
+- limita tamanho por `MAX_UPLOAD_MB`;
+- redimensiona conforme o uso;
+- remove metadados;
+- converte para WebP;
+- salva em `UPLOAD_DIR`;
+- serve os arquivos por `/uploads`;
+- usa nomes de arquivo em slug a partir do produto/estabelecimento para URLs mais legíveis;
+- define `title`, `description`, Open Graph e `alt` nas imagens principais do cardápio público.
+
+Configuracao importante:
+
+- `PUBLIC_UPLOAD_BASE_URL`: URL publica usada para montar os links das imagens.
+- `UPLOAD_DIR`: volume local onde os arquivos ficam persistidos.
+
+Também existe a opção paga de melhorar imagem com IA. Ela usa `OPENAI_API_KEY`, `OPENAI_IMAGE_MODEL` e consome 1 crédito do estabelecimento por imagem melhorada com sucesso. Se a chamada falhar, o crédito é devolvido.
 
 ## Verificacao
 

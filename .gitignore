@@ -65,6 +65,7 @@ web_modules/
 
 # dotenv environment variable files
 .env
+.env.*
 .env.development.local
 .env.test.local
 .env.production.local
@@ -144,10 +145,13 @@ build/
 out/
 uploads/
 backend/generated/
+backups/
 
 # Temporary files
 *.tmp
 *.temp
+tmp/
+temp/
 
 # Local development
 .env.local

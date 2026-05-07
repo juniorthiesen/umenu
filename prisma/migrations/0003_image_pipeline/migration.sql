@@ -1,0 +1,2 @@
+ALTER TABLE "establishments"
+ADD COLUMN "aiImageCredits" INTEGER NOT NULL DEFAULT 0;

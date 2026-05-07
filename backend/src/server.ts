@@ -10,6 +10,14 @@ import { UserRole } from "../generated/prisma/enums";
 import { authPlugin } from "./auth";
 import { prisma } from "./db";
 import { env } from "./env";
+import {
+  assertSupportedImage,
+  buildPublicImageUrl,
+  fetchImageBuffer,
+  improveFoodImageWithOpenAI,
+  maxUploadBytes,
+  storeOptimizedImage
+} from "./services/images";
 import { isValidSubdomain, slugify } from "./utils/slug";
 import { PricingType } from "../generated/prisma/enums";
 
@@ -37,7 +45,12 @@ await app.register(cors, {
   credentials: true
 });
 
-await app.register(multipart);
+await app.register(multipart, {
+  limits: {
+    fileSize: maxUploadBytes(),
+    files: 1
+  }
+});
 await app.register(staticFiles, {
   root: uploadRoot,
   prefix: "/uploads/"
@@ -169,6 +182,19 @@ const establishmentUpdateSchema = z.object({
   primaryColor: z.string().min(4).max(20).optional(),
   deliveryFee: z.coerce.number().min(0).optional(),
   minimumOrder: z.coerce.number().min(0).optional()
+});
+
+const aiCreditSchema = z.object({
+  credits: z.number().int().min(0).max(10000)
+});
+
+const imageScopeSchema = z.object({
+  scope: z.enum(["product", "logo", "banner"]).default("product"),
+  nameHint: z.string().trim().max(120).optional()
+});
+
+const imageEnhanceSchema = z.object({
+  prompt: z.string().max(1000).optional()
 });
 
 const publicOrderSchema = z.object({
@@ -436,7 +462,8 @@ app.post("/api/admin/establishments", { preHandler: [requirePlatformAdmin] }, as
       id: true,
       name: true,
       subdomain: true,
-      status: true
+      status: true,
+      aiImageCredits: true
     }
   });
 
@@ -464,6 +491,7 @@ app.get("/api/admin/establishments", { preHandler: [app.authenticate] }, async (
         subdomain: true,
         status: true,
         whatsappPhone: true,
+        aiImageCredits: true,
         createdAt: true
       }
     });
@@ -477,6 +505,7 @@ app.get("/api/admin/establishments", { preHandler: [app.authenticate] }, async (
       subdomain: true,
       status: true,
       whatsappPhone: true,
+      aiImageCredits: true,
       createdAt: true
     }
   });
@@ -594,6 +623,54 @@ app.patch("/api/admin/establishments/:establishmentId", { preHandler: [requireAd
   });
 });
 
+app.post("/api/admin/establishments/:establishmentId/ai-credits", { preHandler: [requirePlatformAdmin] }, async (request) => {
+  const { establishmentId } = z.object({ establishmentId: z.string().uuid() }).parse(request.params);
+  const input = aiCreditSchema.parse(request.body);
+
+  const establishment = await prisma.establishment.update({
+    where: { id: establishmentId },
+    data: { aiImageCredits: input.credits },
+    select: { id: true, aiImageCredits: true }
+  });
+
+  return establishment;
+});
+
+app.post("/api/admin/establishments/:establishmentId/images", { preHandler: [requireAdminAccessToEstablishment] }, async (request, reply) => {
+  const { establishmentId } = z.object({ establishmentId: z.string().uuid() }).parse(request.params);
+  const query = imageScopeSchema.parse(request.query);
+  const file = await request.file();
+
+  if (!file) {
+    return reply.code(400).send({ error: "image_required" });
+  }
+
+  try {
+    assertSupportedImage(file.mimetype);
+    const buffer = await file.toBuffer();
+    const stored = await storeOptimizedImage({
+      input: buffer,
+      uploadRoot,
+      establishmentId,
+      scope: query.scope,
+      nameHint: query.nameHint
+    });
+    const protocol = String(request.headers["x-forwarded-proto"] || "http").split(",")[0];
+
+    return reply.code(201).send({
+      url: buildPublicImageUrl(stored.publicPath, request.headers.host || "localhost", protocol),
+      path: stored.publicPath,
+      width: stored.width,
+      height: stored.height,
+      size: stored.size,
+      format: stored.format
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "image_processing_failed";
+    return reply.code(message === "unsupported_image_type" ? 415 : 400).send({ error: message });
+  }
+});
+
 app.post("/api/admin/establishments/:establishmentId/categories", { preHandler: [requireAdminAccessToEstablishment] }, async (request, reply) => {
   const { establishmentId } = z.object({ establishmentId: z.string().uuid() }).parse(request.params);
   const input = categoryCreateSchema.parse(request.body);
@@ -707,6 +784,97 @@ app.patch("/api/admin/products/:productId", { preHandler: [app.authenticate] }, 
     minQuantity: updated.minQuantity ? Number(updated.minQuantity) : null,
     stepQuantity: Number(updated.stepQuantity)
   };
+});
+
+app.post("/api/admin/products/:productId/image/enhance", { preHandler: [app.authenticate] }, async (request, reply) => {
+  const { productId } = z.object({ productId: z.string().uuid() }).parse(request.params);
+  const input = imageEnhanceSchema.parse(request.body || {});
+
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    include: { establishment: { select: { id: true, aiImageCredits: true } } }
+  });
+
+  if (!product) {
+    return reply.code(404).send({ error: "product_not_found" });
+  }
+
+  if (
+    request.user.role !== "PLATFORM_ADMIN" &&
+    !request.user.establishmentIds.includes(product.establishmentId)
+  ) {
+    return reply.code(403).send({ error: "forbidden" });
+  }
+
+  if (!product.imageUrl) {
+    return reply.code(400).send({ error: "product_image_required" });
+  }
+
+  const reserved = await prisma.establishment.updateMany({
+    where: {
+      id: product.establishmentId,
+      aiImageCredits: { gt: 0 }
+    },
+    data: {
+      aiImageCredits: { decrement: 1 }
+    }
+  });
+
+  if (reserved.count === 0) {
+    return reply.code(402).send({ error: "ai_credits_required" });
+  }
+
+  try {
+    const sourceBuffer = await fetchImageBuffer(product.imageUrl);
+    const improved = await improveFoodImageWithOpenAI({
+      image: sourceBuffer,
+      productName: product.name,
+      prompt: input.prompt
+    });
+    const stored = await storeOptimizedImage({
+      input: improved,
+      uploadRoot,
+      establishmentId: product.establishmentId,
+      scope: "ai",
+      nameHint: product.name
+    });
+    const protocol = String(request.headers["x-forwarded-proto"] || "http").split(",")[0];
+    const imageUrl = buildPublicImageUrl(stored.publicPath, request.headers.host || "localhost", protocol);
+
+    const updated = await prisma.product.update({
+      where: { id: productId },
+      data: { imageUrl }
+    });
+    const credits = await prisma.establishment.findUnique({
+      where: { id: product.establishmentId },
+      select: { aiImageCredits: true }
+    });
+
+    return {
+      product: {
+        ...updated,
+        price: Number(updated.price),
+        minQuantity: updated.minQuantity ? Number(updated.minQuantity) : null,
+        stepQuantity: Number(updated.stepQuantity)
+      },
+      image: {
+        url: imageUrl,
+        path: stored.publicPath,
+        width: stored.width,
+        height: stored.height,
+        size: stored.size,
+        format: stored.format
+      },
+      aiImageCredits: credits?.aiImageCredits ?? 0
+    };
+  } catch (error) {
+    await prisma.establishment.update({
+      where: { id: product.establishmentId },
+      data: { aiImageCredits: { increment: 1 } }
+    });
+    const message = error instanceof Error ? error.message : "image_enhance_failed";
+    return reply.code(message === "openai_not_configured" ? 503 : 400).send({ error: message });
+  }
 });
 
 const start = async () => {
