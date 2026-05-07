@@ -198,7 +198,27 @@ const establishmentUpdateSchema = z.object({
   bannerUrl: z.string().url().nullable().optional(),
   primaryColor: z.string().min(4).max(20).optional(),
   deliveryFee: z.coerce.number().min(0).optional(),
-  minimumOrder: z.coerce.number().min(0).optional()
+  minimumOrder: z.coerce.number().min(0).optional(),
+  status: z.enum(["ACTIVE", "SUSPENDED", "ARCHIVED"]).optional()
+});
+
+const adminPasswordResetSchema = z.object({
+  userId: z.string().uuid(),
+  password: z.string().min(8)
+});
+
+const publicSignupSchema = z.object({
+  establishment: z.object({
+    name: z.string().min(2),
+    subdomain: z.string().min(3),
+    whatsappPhone: z.string().min(10),
+    address: z.string().optional()
+  }),
+  admin: z.object({
+    name: z.string().min(2),
+    email: z.string().email(),
+    password: z.string().min(8)
+  })
 });
 
 const aiCreditSchema = z.object({
@@ -379,6 +399,82 @@ app.get("/api/public/menu/:subdomain", async (request, reply) => {
       }))
     }))
   };
+});
+
+app.post("/api/public/signup", async (request, reply) => {
+  const input = publicSignupSchema.parse(request.body);
+  const subdomain = slugify(input.establishment.subdomain);
+
+  if (!isValidSubdomain(subdomain)) {
+    return reply.code(400).send({ error: "invalid_subdomain" });
+  }
+
+  const [existingEstablishment, existingUser] = await Promise.all([
+    prisma.establishment.findUnique({ where: { subdomain }, select: { id: true } }),
+    prisma.user.findUnique({ where: { email: input.admin.email.toLowerCase() }, select: { id: true } })
+  ]);
+
+  if (existingEstablishment) {
+    return reply.code(409).send({ error: "subdomain_unavailable" });
+  }
+
+  if (existingUser) {
+    return reply.code(409).send({ error: "email_unavailable" });
+  }
+
+  const passwordHash = await bcrypt.hash(input.admin.password, 12);
+
+  const establishment = await prisma.establishment.create({
+    data: {
+      name: input.establishment.name,
+      slug: subdomain,
+      subdomain,
+      whatsappPhone: input.establishment.whatsappPhone,
+      address: input.establishment.address,
+      aiImageCredits: 5,
+      users: {
+        create: {
+          user: {
+            create: {
+              name: input.admin.name,
+              email: input.admin.email.toLowerCase(),
+              passwordHash,
+              role: UserRole.ESTABLISHMENT_ADMIN
+            }
+          }
+        }
+      }
+    },
+    include: {
+      users: { include: { user: true } }
+    }
+  });
+
+  const user = establishment.users[0].user;
+  const token = app.jwt.sign(
+    {
+      sub: user.id,
+      role: user.role,
+      establishmentIds: [establishment.id]
+    },
+    { expiresIn: "8h" }
+  );
+
+  return reply.code(201).send({
+    token,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      establishmentIds: [establishment.id]
+    },
+    establishment: {
+      id: establishment.id,
+      name: establishment.name,
+      subdomain: establishment.subdomain
+    }
+  });
 });
 
 app.post("/api/public/menu/:subdomain/visit", async (request, reply) => {
@@ -801,6 +897,86 @@ app.patch("/api/admin/products/:productId", { preHandler: [app.authenticate] }, 
     minQuantity: updated.minQuantity ? Number(updated.minQuantity) : null,
     stepQuantity: Number(updated.stepQuantity)
   };
+});
+
+app.delete("/api/admin/products/:productId", { preHandler: [app.authenticate] }, async (request, reply) => {
+  const { productId } = z.object({ productId: z.string().uuid() }).parse(request.params);
+
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    select: { id: true, establishmentId: true }
+  });
+  if (!product) {
+    return reply.code(404).send({ error: "product_not_found" });
+  }
+
+  if (
+    request.user.role !== "PLATFORM_ADMIN" &&
+    !request.user.establishmentIds.includes(product.establishmentId)
+  ) {
+    return reply.code(403).send({ error: "forbidden" });
+  }
+
+  await prisma.product.delete({ where: { id: productId } });
+  return reply.code(204).send();
+});
+
+app.delete("/api/admin/categories/:categoryId", { preHandler: [app.authenticate] }, async (request, reply) => {
+  const { categoryId } = z.object({ categoryId: z.string().uuid() }).parse(request.params);
+
+  const category = await prisma.category.findUnique({
+    where: { id: categoryId },
+    select: { id: true, establishmentId: true, _count: { select: { products: true } } }
+  });
+  if (!category) {
+    return reply.code(404).send({ error: "category_not_found" });
+  }
+
+  if (
+    request.user.role !== "PLATFORM_ADMIN" &&
+    !request.user.establishmentIds.includes(category.establishmentId)
+  ) {
+    return reply.code(403).send({ error: "forbidden" });
+  }
+
+  if (category._count.products > 0) {
+    return reply.code(409).send({ error: "category_has_products" });
+  }
+
+  await prisma.category.delete({ where: { id: categoryId } });
+  return reply.code(204).send();
+});
+
+app.post("/api/admin/establishments/:establishmentId/admin-password", { preHandler: [requirePlatformAdmin] }, async (request, reply) => {
+  const { establishmentId } = z.object({ establishmentId: z.string().uuid() }).parse(request.params);
+  const input = adminPasswordResetSchema.parse(request.body);
+
+  const membership = await prisma.establishmentUser.findUnique({
+    where: { userId_establishmentId: { userId: input.userId, establishmentId } },
+    select: { userId: true }
+  });
+  if (!membership) {
+    return reply.code(404).send({ error: "membership_not_found" });
+  }
+
+  const passwordHash = await bcrypt.hash(input.password, 12);
+  await prisma.user.update({
+    where: { id: input.userId },
+    data: { passwordHash }
+  });
+
+  return reply.send({ ok: true });
+});
+
+app.get("/api/admin/establishments/:establishmentId/admins", { preHandler: [requireAdminAccessToEstablishment] }, async (request) => {
+  const { establishmentId } = z.object({ establishmentId: z.string().uuid() }).parse(request.params);
+  const memberships = await prisma.establishmentUser.findMany({
+    where: { establishmentId },
+    select: {
+      user: { select: { id: true, name: true, email: true, role: true } }
+    }
+  });
+  return memberships.map((membership) => membership.user);
 });
 
 app.post("/api/admin/products/:productId/image/enhance", { preHandler: [app.authenticate] }, async (request, reply) => {

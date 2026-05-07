@@ -80,3 +80,10 @@ export interface UploadedImage {
   size: number;
   format: "webp";
 }
+
+export interface EstablishmentAdmin {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+}
