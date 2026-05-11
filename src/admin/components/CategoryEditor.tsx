@@ -2,7 +2,7 @@ import { ArrowDown, ArrowUp, Loader2, Save, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../../api";
 import { ConfirmDialog } from "../../shared/components/ConfirmDialog";
-import type { Category } from "../../types";
+import type { Category, Template } from "../../types";
 import { ProductTable } from "./ProductTable";
 
 export function CategoryEditor({
@@ -11,6 +11,7 @@ export function CategoryEditor({
   index,
   total,
   aiImageCredits,
+  template,
   reload
 }: {
   category: Category;
@@ -18,6 +19,7 @@ export function CategoryEditor({
   index: number;
   total: number;
   aiImageCredits: number;
+  template: Template;
   reload: () => Promise<void> | void;
 }) {
   const [name, setName] = useState(category.name);
@@ -130,6 +132,7 @@ export function CategoryEditor({
           category={category}
           categories={categories}
           aiImageCredits={aiImageCredits}
+          template={template}
           reload={reload}
         />
       </div>

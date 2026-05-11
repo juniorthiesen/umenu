@@ -174,6 +174,7 @@ const productCreateSchema = z.object({
   minQuantity: z.coerce.number().positive().optional(),
   stepQuantity: z.coerce.number().positive().default(1),
   imageUrl: z.string().url().optional(),
+  allowsNotes: z.boolean().default(false),
   displayOrder: z.number().int().default(0)
 });
 
@@ -186,9 +187,34 @@ const productUpdateSchema = z.object({
   minQuantity: z.coerce.number().positive().optional(),
   stepQuantity: z.coerce.number().positive().optional(),
   imageUrl: z.string().url().optional(),
+  allowsNotes: z.boolean().optional(),
   displayOrder: z.number().int().optional(),
   isActive: z.boolean().optional()
 });
+
+const selectionTypeEnum = z.enum(["SINGLE", "MULTIPLE", "QUANTITY"]);
+const pricingRuleEnum = z.enum(["SUM", "HIGHEST", "AVERAGE", "REPLACE"]);
+
+const optionGroupCreateSchema = z.object({
+  name: z.string().min(1),
+  selectionType: selectionTypeEnum.default("SINGLE"),
+  pricingRule: pricingRuleEnum.default("SUM"),
+  required: z.boolean().default(false),
+  minSelections: z.number().int().min(0).default(0),
+  maxSelections: z.number().int().positive().optional(),
+  displayOrder: z.number().int().default(0)
+});
+
+const optionGroupUpdateSchema = optionGroupCreateSchema.partial();
+
+const optionItemCreateSchema = z.object({
+  name: z.string().min(1),
+  priceDelta: z.coerce.number().default(0),
+  displayOrder: z.number().int().default(0),
+  isDefault: z.boolean().default(false)
+});
+
+const optionItemUpdateSchema = optionItemCreateSchema.partial();
 
 const establishmentUpdateSchema = z.object({
   name: z.string().min(2).optional(),
@@ -197,6 +223,9 @@ const establishmentUpdateSchema = z.object({
   logoUrl: z.string().url().nullable().optional(),
   bannerUrl: z.string().url().nullable().optional(),
   primaryColor: z.string().min(4).max(20).optional(),
+  accentColor: z.string().min(4).max(20).nullable().optional(),
+  surfaceColor: z.string().min(4).max(20).nullable().optional(),
+  template: z.enum(["SALGADERIA", "DOCERIA", "BOLARIA", "PIZZARIA"]).optional(),
   deliveryFee: z.coerce.number().min(0).optional(),
   minimumOrder: z.coerce.number().min(0).optional(),
   status: z.enum(["ACTIVE", "SUSPENDED", "ARCHIVED"]).optional()
@@ -240,7 +269,18 @@ const publicOrderSchema = z.object({
       productId: z.string(),
       name: z.string(),
       quantity: z.number().positive(),
-      unitPrice: z.number().nonnegative()
+      unitPrice: z.number().nonnegative(),
+      selectedOptions: z
+        .array(
+          z.object({
+            groupId: z.string(),
+            groupName: z.string(),
+            itemIds: z.array(z.string()),
+            itemNames: z.array(z.string())
+          })
+        )
+        .optional(),
+      notes: z.string().max(500).optional()
     })
   ),
   totalAmount: z.number().nonnegative(),
@@ -357,7 +397,17 @@ app.get("/api/public/menu/:subdomain", async (request, reply) => {
         include: {
           products: {
             where: { isActive: true },
-            orderBy: [{ displayOrder: "asc" }, { name: "asc" }]
+            orderBy: [{ displayOrder: "asc" }, { name: "asc" }],
+            include: {
+              optionGroups: {
+                orderBy: [{ displayOrder: "asc" }, { name: "asc" }],
+                include: {
+                  items: {
+                    orderBy: [{ displayOrder: "asc" }, { name: "asc" }]
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -377,7 +427,10 @@ app.get("/api/public/menu/:subdomain", async (request, reply) => {
       address: establishment.address,
       logoUrl: establishment.logoUrl,
       bannerUrl: establishment.bannerUrl,
+      template: establishment.template,
       primaryColor: establishment.primaryColor,
+      accentColor: establishment.accentColor,
+      surfaceColor: establishment.surfaceColor,
       deliveryFee: Number(establishment.deliveryFee),
       minimumOrder: Number(establishment.minimumOrder),
       openingHours: establishment.openingHours
@@ -395,7 +448,25 @@ app.get("/api/public/menu/:subdomain", async (request, reply) => {
         pricingType: product.pricingType,
         minQuantity: product.minQuantity ? Number(product.minQuantity) : null,
         stepQuantity: Number(product.stepQuantity),
-        imageUrl: product.imageUrl
+        imageUrl: product.imageUrl,
+        allowsNotes: product.allowsNotes,
+        optionGroups: product.optionGroups.map((group) => ({
+          id: group.id,
+          name: group.name,
+          selectionType: group.selectionType,
+          pricingRule: group.pricingRule,
+          required: group.required,
+          minSelections: group.minSelections,
+          maxSelections: group.maxSelections,
+          displayOrder: group.displayOrder,
+          items: group.items.map((item) => ({
+            id: item.id,
+            name: item.name,
+            priceDelta: Number(item.priceDelta),
+            displayOrder: item.displayOrder,
+            isDefault: item.isDefault
+          }))
+        }))
       }))
     }))
   };
@@ -634,7 +705,17 @@ app.get("/api/admin/establishments/:establishmentId", { preHandler: [requireAdmi
         orderBy: [{ displayOrder: "asc" }, { name: "asc" }],
         include: {
           products: {
-            orderBy: [{ displayOrder: "asc" }, { name: "asc" }]
+            orderBy: [{ displayOrder: "asc" }, { name: "asc" }],
+            include: {
+              optionGroups: {
+                orderBy: [{ displayOrder: "asc" }, { name: "asc" }],
+                include: {
+                  items: {
+                    orderBy: [{ displayOrder: "asc" }, { name: "asc" }]
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -655,7 +736,14 @@ app.get("/api/admin/establishments/:establishmentId", { preHandler: [requireAdmi
         ...product,
         price: Number(product.price),
         minQuantity: product.minQuantity ? Number(product.minQuantity) : null,
-        stepQuantity: Number(product.stepQuantity)
+        stepQuantity: Number(product.stepQuantity),
+        optionGroups: product.optionGroups.map((group) => ({
+          ...group,
+          items: group.items.map((item) => ({
+            ...item,
+            priceDelta: Number(item.priceDelta)
+          }))
+        }))
       }))
     }))
   };
@@ -977,6 +1065,139 @@ app.get("/api/admin/establishments/:establishmentId/admins", { preHandler: [requ
     }
   });
   return memberships.map((membership) => membership.user);
+});
+
+const userOwnsProduct = async (request: any, productId: string) => {
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    select: { id: true, establishmentId: true }
+  });
+  if (!product) return null;
+  if (
+    request.user.role !== "PLATFORM_ADMIN" &&
+    !request.user.establishmentIds.includes(product.establishmentId)
+  ) {
+    return "forbidden" as const;
+  }
+  return product;
+};
+
+const userOwnsOptionGroup = async (request: any, groupId: string) => {
+  const group = await prisma.productOptionGroup.findUnique({
+    where: { id: groupId },
+    include: { product: { select: { establishmentId: true } } }
+  });
+  if (!group) return null;
+  if (
+    request.user.role !== "PLATFORM_ADMIN" &&
+    !request.user.establishmentIds.includes(group.product.establishmentId)
+  ) {
+    return "forbidden" as const;
+  }
+  return group;
+};
+
+const userOwnsOptionItem = async (request: any, itemId: string) => {
+  const item = await prisma.productOptionItem.findUnique({
+    where: { id: itemId },
+    include: { group: { include: { product: { select: { establishmentId: true } } } } }
+  });
+  if (!item) return null;
+  if (
+    request.user.role !== "PLATFORM_ADMIN" &&
+    !request.user.establishmentIds.includes(item.group.product.establishmentId)
+  ) {
+    return "forbidden" as const;
+  }
+  return item;
+};
+
+const serializeOptionGroup = (group: any) => ({
+  ...group,
+  items: group.items?.map((item: any) => ({
+    ...item,
+    priceDelta: Number(item.priceDelta)
+  }))
+});
+
+app.post("/api/admin/products/:productId/option-groups", { preHandler: [app.authenticate] }, async (request, reply) => {
+  const { productId } = z.object({ productId: z.string().uuid() }).parse(request.params);
+  const ownership = await userOwnsProduct(request, productId);
+  if (ownership === null) return reply.code(404).send({ error: "product_not_found" });
+  if (ownership === "forbidden") return reply.code(403).send({ error: "forbidden" });
+
+  const input = optionGroupCreateSchema.parse(request.body);
+  const group = await prisma.productOptionGroup.create({
+    data: { productId, ...input },
+    include: { items: true }
+  });
+
+  return reply.code(201).send(serializeOptionGroup(group));
+});
+
+app.patch("/api/admin/option-groups/:groupId", { preHandler: [app.authenticate] }, async (request, reply) => {
+  const { groupId } = z.object({ groupId: z.string().uuid() }).parse(request.params);
+  const ownership = await userOwnsOptionGroup(request, groupId);
+  if (ownership === null) return reply.code(404).send({ error: "option_group_not_found" });
+  if (ownership === "forbidden") return reply.code(403).send({ error: "forbidden" });
+
+  const input = optionGroupUpdateSchema.parse(request.body);
+  const updated = await prisma.productOptionGroup.update({
+    where: { id: groupId },
+    data: input,
+    include: { items: true }
+  });
+
+  return serializeOptionGroup(updated);
+});
+
+app.delete("/api/admin/option-groups/:groupId", { preHandler: [app.authenticate] }, async (request, reply) => {
+  const { groupId } = z.object({ groupId: z.string().uuid() }).parse(request.params);
+  const ownership = await userOwnsOptionGroup(request, groupId);
+  if (ownership === null) return reply.code(404).send({ error: "option_group_not_found" });
+  if (ownership === "forbidden") return reply.code(403).send({ error: "forbidden" });
+
+  await prisma.productOptionGroup.delete({ where: { id: groupId } });
+  return reply.code(204).send();
+});
+
+app.post("/api/admin/option-groups/:groupId/items", { preHandler: [app.authenticate] }, async (request, reply) => {
+  const { groupId } = z.object({ groupId: z.string().uuid() }).parse(request.params);
+  const ownership = await userOwnsOptionGroup(request, groupId);
+  if (ownership === null) return reply.code(404).send({ error: "option_group_not_found" });
+  if (ownership === "forbidden") return reply.code(403).send({ error: "forbidden" });
+
+  const input = optionItemCreateSchema.parse(request.body);
+  const item = await prisma.productOptionItem.create({
+    data: { groupId, ...input }
+  });
+
+  return reply.code(201).send({ ...item, priceDelta: Number(item.priceDelta) });
+});
+
+app.patch("/api/admin/option-items/:itemId", { preHandler: [app.authenticate] }, async (request, reply) => {
+  const { itemId } = z.object({ itemId: z.string().uuid() }).parse(request.params);
+  const ownership = await userOwnsOptionItem(request, itemId);
+  if (ownership === null) return reply.code(404).send({ error: "option_item_not_found" });
+  if (ownership === "forbidden") return reply.code(403).send({ error: "forbidden" });
+
+  const input = optionItemUpdateSchema.parse(request.body);
+  const updated = await prisma.productOptionItem.update({
+    where: { id: itemId },
+    data: input
+  });
+
+  return { ...updated, priceDelta: Number(updated.priceDelta) };
+});
+
+app.delete("/api/admin/option-items/:itemId", { preHandler: [app.authenticate] }, async (request, reply) => {
+  const { itemId } = z.object({ itemId: z.string().uuid() }).parse(request.params);
+  const ownership = await userOwnsOptionItem(request, itemId);
+  if (ownership === null) return reply.code(404).send({ error: "option_item_not_found" });
+  if (ownership === "forbidden") return reply.code(403).send({ error: "forbidden" });
+
+  await prisma.productOptionItem.delete({ where: { id: itemId } });
+  return reply.code(204).send();
 });
 
 app.post("/api/admin/products/:productId/image/enhance", { preHandler: [app.authenticate] }, async (request, reply) => {

@@ -47,6 +47,7 @@ export function EstablishmentCatalogPage() {
               index={index}
               total={sortedCategories.length}
               aiImageCredits={establishment.aiImageCredits}
+              template={establishment.template}
               reload={reload}
             />
           ))

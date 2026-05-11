@@ -1,4 +1,14 @@
-import type { EstablishmentAdmin, EstablishmentAnalytics, EstablishmentDetail, EstablishmentSummary, SessionUser, UploadedImage, Product } from "./types";
+import type {
+  EstablishmentAdmin,
+  EstablishmentAnalytics,
+  EstablishmentDetail,
+  EstablishmentSummary,
+  Product,
+  ProductOptionGroup,
+  ProductOptionItem,
+  SessionUser,
+  UploadedImage
+} from "./types";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3333";
 
@@ -190,5 +200,29 @@ export const api = {
     request<{ ok: true }>(`/api/admin/establishments/${establishmentId}/admin-password`, {
       method: "POST",
       body: JSON.stringify({ userId, password })
-    })
+    }),
+  createOptionGroup: (productId: string, payload: Partial<ProductOptionGroup> & { name: string }) =>
+    request<ProductOptionGroup>(`/api/admin/products/${productId}/option-groups`, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+  updateOptionGroup: (groupId: string, payload: Partial<ProductOptionGroup>) =>
+    request<ProductOptionGroup>(`/api/admin/option-groups/${groupId}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload)
+    }),
+  deleteOptionGroup: (groupId: string) =>
+    requestVoid(`/api/admin/option-groups/${groupId}`, { method: "DELETE" }),
+  createOptionItem: (groupId: string, payload: Partial<ProductOptionItem> & { name: string }) =>
+    request<ProductOptionItem>(`/api/admin/option-groups/${groupId}/items`, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+  updateOptionItem: (itemId: string, payload: Partial<ProductOptionItem>) =>
+    request<ProductOptionItem>(`/api/admin/option-items/${itemId}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload)
+    }),
+  deleteOptionItem: (itemId: string) =>
+    requestVoid(`/api/admin/option-items/${itemId}`, { method: "DELETE" })
 };

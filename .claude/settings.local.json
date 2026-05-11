@@ -17,7 +17,27 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173/)",
       "Bash(curl -s -X POST http://localhost:3333/api/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"admin@umenu.local\",\"password\":\"change-me-admin-password\"}')",
       "Bash(curl -s http://localhost:5173/)",
-      "Bash(curl -s -o /dev/null -w \"/src/main.tsx => HTTP %{http_code}\\\\n\" http://localhost:5173/src/main.tsx)"
+      "Bash(curl -s -o /dev/null -w \"/src/main.tsx => HTTP %{http_code}\\\\n\" http://localhost:5173/src/main.tsx)",
+      "PowerShell($content = Get-Content -Raw -Encoding UTF8 \"d:\\\\umenu\\\\src\\\\App.tsx\"; $head = $content.Substring\\(0, $content.IndexOf\\(\"`r`nfunction LandingPage\\(\\)\"\\)\\); $tailMarker = \"`r`nexport default App;\"; $tail = $content.Substring\\($content.IndexOf\\($tailMarker\\)\\); \\($head + $tail\\) | Set-Content -Encoding UTF8 -NoNewline \"d:\\\\umenu\\\\src\\\\App.tsx\"; Get-Content \"d:\\\\umenu\\\\src\\\\App.tsx\" | Measure-Object -Line | Select-Object -ExpandProperty Lines)",
+      "PowerShell(\"---BACKEND---\")",
+      "Bash(curl -s -o /tmp/signup.json -w 'HTTP %{http_code}\\\\n' -X POST http://localhost:3333/api/public/signup -H 'Content-Type: application/json' -d '{ *)",
+      "Read(//tmp/**)",
+      "Bash(python -m json.tool)",
+      "Bash(curl -s -o /dev/null -w 'Login HTTP %{http_code}\\\\n' -X POST http://localhost:3333/api/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"maria-teste@umenu.local\",\"password\":\"senha-teste-1234\"}')",
+      "Bash(curl -s -o /dev/null -w 'Repeat signup HTTP %{http_code}\\\\n' -X POST http://localhost:3333/api/public/signup -H 'Content-Type: application/json' -d '{ *)",
+      "Bash(curl -s http://localhost:3333/api/public/subdomains/salgaderia-teste-lp/availability)",
+      "Bash(curl -s http://localhost:3333/api/public/subdomains/disponivel-mesmo-2026/availability)",
+      "Bash(curl -s -X POST http://localhost:3333/api/auth/login -H \"Content-Type: application/json\" -d '{\"email\":\"admin@umenu.local\",\"password\":\"change-me-admin-password\"}')",
+      "Bash(Get-ChildItem -Path \"D:\\\\umenu\" -Recurse -Filter \"cardapio-cassia\" -ErrorAction SilentlyContinue)",
+      "Bash(Select-Object FullName)",
+      "PowerShell(Test-NetConnection -ComputerName localhost -Port 5433 -InformationLevel Quiet)",
+      "PowerShell(\"---\")",
+      "PowerShell(Test-NetConnection -ComputerName localhost -Port 5432 -InformationLevel Quiet)",
+      "PowerShell(npm run prisma:generate 2>&1)",
+      "PowerShell(npx prisma migrate dev --name option_groups 2>&1)",
+      "PowerShell(npx prisma migrate dev --name templates_and_brand_colors 2>&1)",
+      "Bash(git check-ignore *)",
+      "Bash(git add *)"
     ]
   }
 }

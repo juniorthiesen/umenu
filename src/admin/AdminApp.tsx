@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { api } from "../api";
 import { LoginScreen } from "../auth/LoginScreen";
+import { TrialSignupPage } from "../auth/TrialSignupPage";
+import { LandingPage } from "../landing/LandingPage";
 import { FullScreenLoading } from "../shared/components/FullScreenLoading";
 import type { SessionUser } from "../types";
 import { AdminLayout } from "./AdminLayout";
@@ -50,7 +52,15 @@ export function AdminApp() {
   }
 
   if (!token || !user) {
-    return <LoginScreen onLogin={handleLogin} />;
+    return (
+      <BrowserRouter>
+        <Routes>
+          <Route path="/lp" element={<LandingPage />} />
+          <Route path="/cadastro-trial" element={<TrialSignupPage onSignup={handleLogin} />} />
+          <Route path="*" element={<LoginScreen onLogin={handleLogin} />} />
+        </Routes>
+      </BrowserRouter>
+    );
   }
 
   const isPlatformAdmin = user.role === "PLATFORM_ADMIN";
@@ -58,6 +68,8 @@ export function AdminApp() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/lp" element={<LandingPage />} />
+        <Route path="/cadastro-trial" element={<Navigate to="/" replace />} />
         <Route element={<AdminLayout user={user} onLogout={handleLogout} />}>
           <Route index element={<OverviewPage />} />
           <Route path="estabelecimentos" element={<EstablishmentsPage />} />

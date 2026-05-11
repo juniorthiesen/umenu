@@ -5,20 +5,25 @@ import { api, ApiError } from "../../api";
 import { ImageUploadControl } from "../../shared/components/ImageUploadControl";
 import { Input } from "../../shared/components/Input";
 import { currency } from "../../shared/utils/currency";
-import type { Category, PricingType, Product } from "../../types";
+import type { Category, PricingType, Product, Template } from "../../types";
+import { OptionGroupsEditor } from "./OptionGroupsEditor";
 
 export function ProductEditModal({
   product,
   categories,
   aiImageCredits,
+  template,
   close,
-  onSaved
+  onSaved,
+  onReload
 }: {
   product: Product;
   categories: Category[];
   aiImageCredits: number;
+  template: Template;
   close: () => void;
   onSaved: () => Promise<void>;
+  onReload: () => Promise<void>;
 }) {
   const [form, setForm] = useState({
     categoryId: product.categoryId,
@@ -29,7 +34,8 @@ export function ProductEditModal({
     minQuantity: String(product.minQuantity || 1),
     stepQuantity: String(product.stepQuantity || 1),
     imageUrl: product.imageUrl || "",
-    isActive: product.isActive
+    isActive: product.isActive,
+    allowsNotes: product.allowsNotes
   });
   const [saving, setSaving] = useState(false);
   const [enhancing, setEnhancing] = useState(false);
@@ -51,7 +57,8 @@ export function ProductEditModal({
         minQuantity: form.minQuantity ? Number(form.minQuantity) : undefined,
         stepQuantity: Number(form.stepQuantity),
         imageUrl: form.imageUrl || undefined,
-        isActive: form.isActive
+        isActive: form.isActive,
+        allowsNotes: form.allowsNotes
       });
       await onSaved();
     } catch {
@@ -193,7 +200,24 @@ export function ProductEditModal({
               />
               Produto visível no cardápio
             </label>
+            <label className="md:col-span-2 flex items-center gap-2 text-sm font-medium text-slate-700">
+              <input
+                type="checkbox"
+                checked={form.allowsNotes}
+                onChange={(event) => setForm({ ...form, allowsNotes: event.target.checked })}
+              />
+              Cliente pode escrever uma observação (ex.: "sem cebola")
+            </label>
           </div>
+        </div>
+
+        <div className="mt-5">
+          <OptionGroupsEditor
+            productId={product.id}
+            groups={product.optionGroups || []}
+            template={template}
+            reload={onReload}
+          />
         </div>
 
         {error && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}

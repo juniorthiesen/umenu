@@ -1,6 +1,31 @@
 export type UserRole = "PLATFORM_ADMIN" | "ESTABLISHMENT_ADMIN";
 export type EstablishmentStatus = "ACTIVE" | "SUSPENDED" | "ARCHIVED";
+export type Template = "SALGADERIA" | "DOCERIA" | "BOLARIA" | "PIZZARIA";
 export type PricingType = "UNIT" | "HUNDRED" | "KG";
+export type SelectionType = "SINGLE" | "MULTIPLE" | "QUANTITY";
+export type PricingRule = "SUM" | "HIGHEST" | "AVERAGE" | "REPLACE";
+
+export interface ProductOptionItem {
+  id: string;
+  groupId: string;
+  name: string;
+  priceDelta: number;
+  displayOrder: number;
+  isDefault: boolean;
+}
+
+export interface ProductOptionGroup {
+  id: string;
+  productId: string;
+  name: string;
+  selectionType: SelectionType;
+  pricingRule: PricingRule;
+  required: boolean;
+  minSelections: number;
+  maxSelections: number | null;
+  displayOrder: number;
+  items: ProductOptionItem[];
+}
 
 export interface SessionUser {
   id: string;
@@ -33,7 +58,9 @@ export interface Product {
   stepQuantity: number;
   imageUrl: string | null;
   isActive: boolean;
+  allowsNotes: boolean;
   displayOrder: number;
+  optionGroups: ProductOptionGroup[];
 }
 
 export interface Category {
@@ -50,7 +77,10 @@ export interface EstablishmentDetail extends EstablishmentSummary {
   address: string | null;
   logoUrl: string | null;
   bannerUrl: string | null;
+  template: Template;
   primaryColor: string;
+  accentColor: string | null;
+  surfaceColor: string | null;
   deliveryFee: number;
   minimumOrder: number;
   aiImageCredits: number;

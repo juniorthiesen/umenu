@@ -1,9 +1,9 @@
 import { ArrowDown, ArrowUp, Edit3, Eye, EyeOff, Loader2, Package, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api, ApiError } from "../../api";
 import { ConfirmDialog } from "../../shared/components/ConfirmDialog";
 import { currency } from "../../shared/utils/currency";
-import type { Category, Product } from "../../types";
+import type { Category, Product, Template } from "../../types";
 import { ProductEditModal } from "./ProductEditModal";
 
 const PRICING_LABEL: Record<Product["pricingType"], string> = {
@@ -16,16 +16,25 @@ export function ProductTable({
   category,
   categories,
   aiImageCredits,
+  template,
   reload
 }: {
   category: Category;
   categories: Category[];
   aiImageCredits: number;
+  template: Template;
   reload: () => Promise<void> | void;
 }) {
   const [editing, setEditing] = useState<Product | null>(null);
   const [deleting, setDeleting] = useState<Product | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+
+  // Sync `editing` with fresh product after reload so OptionGroupsEditor sees new groups without closing modal.
+  useEffect(() => {
+    if (!editing) return;
+    const fresh = category.products.find((product) => product.id === editing.id);
+    if (fresh && fresh !== editing) setEditing(fresh);
+  }, [category.products, editing]);
 
   const toggle = async (product: Product) => {
     setBusyId(product.id);
@@ -184,9 +193,13 @@ export function ProductTable({
           product={editing}
           categories={categories}
           aiImageCredits={aiImageCredits}
+          template={template}
           close={() => setEditing(null)}
           onSaved={async () => {
             setEditing(null);
+            await reload();
+          }}
+          onReload={async () => {
             await reload();
           }}
         />

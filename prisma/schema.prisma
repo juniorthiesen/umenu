@@ -18,10 +18,30 @@ enum EstablishmentStatus {
   ARCHIVED
 }
 
+enum Template {
+  SALGADERIA
+  DOCERIA
+  BOLARIA
+  PIZZARIA
+}
+
 enum PricingType {
   UNIT
   HUNDRED
   KG
+}
+
+enum SelectionType {
+  SINGLE
+  MULTIPLE
+  QUANTITY
+}
+
+enum PricingRule {
+  SUM
+  HIGHEST
+  AVERAGE
+  REPLACE
 }
 
 model User {
@@ -43,11 +63,14 @@ model Establishment {
   slug          String              @unique
   subdomain     String              @unique
   status        EstablishmentStatus @default(ACTIVE)
+  template      Template            @default(SALGADERIA)
   whatsappPhone String
   address       String?
   logoUrl       String?
   bannerUrl     String?
   primaryColor  String              @default("#f97316")
+  accentColor   String?
+  surfaceColor  String?
   deliveryFee   Decimal             @default(0) @db.Decimal(10, 2)
   minimumOrder  Decimal             @default(0) @db.Decimal(10, 2)
   aiImageCredits Int                 @default(0)
@@ -106,7 +129,9 @@ model Product {
   stepQuantity    Decimal       @default(1) @db.Decimal(10, 3)
   imageUrl        String?
   isActive        Boolean       @default(true)
+  allowsNotes     Boolean       @default(false)
   displayOrder    Int           @default(0)
+  optionGroups    ProductOptionGroup[]
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
@@ -114,6 +139,40 @@ model Product {
   @@index([establishmentId, categoryId])
   @@index([establishmentId, displayOrder])
   @@map("products")
+}
+
+model ProductOptionGroup {
+  id            String              @id @default(uuid()) @db.Uuid
+  productId     String              @db.Uuid
+  product       Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name          String
+  selectionType SelectionType       @default(SINGLE)
+  pricingRule   PricingRule         @default(SUM)
+  required      Boolean             @default(false)
+  minSelections Int                 @default(0)
+  maxSelections Int?
+  displayOrder  Int                 @default(0)
+  items         ProductOptionItem[]
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@index([productId, displayOrder])
+  @@map("product_option_groups")
+}
+
+model ProductOptionItem {
+  id           String             @id @default(uuid()) @db.Uuid
+  groupId      String             @db.Uuid
+  group        ProductOptionGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  name         String
+  priceDelta   Decimal            @default(0) @db.Decimal(10, 2)
+  displayOrder Int                @default(0)
+  isDefault    Boolean            @default(false)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  @@index([groupId, displayOrder])
+  @@map("product_option_items")
 }
 
 model Order {
